@@ -5,9 +5,13 @@
 #include <unistd.h>
 #include <string.h>
 #include <pmmintrin.h>
+#include <sys/times.h>
+#include <time.h>
 #define C 1.0
 #define DT 0.1
 #define DD 2.0 
+
+struct tms mytime;
 
 int main(int argc, char * const argv[])
 {
@@ -71,27 +75,23 @@ int main(int argc, char * const argv[])
 	{
 		for (i = 1; i < dim; i++)
 		{	
-			#pragma omp parallel num_threads(hebras)
+			for (j = 1; j < dim; j++)
 			{
-				#pragma omp for schedule(dynamic, 20)
-				for (j = 1; j < dim; j++)
+				if (index == 1)
 				{
-					if (index == 1)
+					H[i][j] = 2*H_t1[i][j] + K1 * (H_t1[i+1][j] + H_t1[i-1][j] + H_t1[i][j-1] + H_t1[i][j+1] - 4*H_t1[i][j]);
+				}
+				else
+				{
+					if (index==2)
 					{
-						H[i][j] = 2*H_t1[i][j] + K1 * (H_t1[i+1][j] + H_t1[i-1][j] + H_t1[i][j-1] + H_t1[i][j+1] - 4*H_t1[i][j]);
+						memcpy(H_t2,H, dim*dim*sizeof(float));
+                    	H_t1[i][j] = 2*H_t2[i][j] + K1 * (H_t2[i+1][j] + H_t2[i-1][j] + H_t2[i][j-1] + H_t2[i][j+1] - 4*H_t2[i][j]);
 					}
 					else
 					{
-						if (index==2)
-						{
-							memcpy(H_t2,H, dim*dim*sizeof(float));
-	                    	H_t1[i][j] = 2*H_t2[i][j] + K1 * (H_t2[i+1][j] + H_t2[i-1][j] + H_t2[i][j-1] + H_t2[i][j+1] - 4*H_t2[i][j]);
-						}
-						else
-						{
-							H[i][j] = 2*H_t1[i][j] - H_t2[i][j] + K2 * (H_t1[i+1][j] + H_t1[i-1][j] + H_t1[i][j-1] + H_t1[i][j+1] - 4*H_t1[i][j]);
-						}	
-					}
+						H[i][j] = 2*H_t1[i][j] - H_t2[i][j] + K2 * (H_t1[i+1][j] + H_t1[i-1][j] + H_t1[i][j-1] + H_t1[i][j+1] - 4*H_t1[i][j]);
+					}	
 				}
 			}
 		}
@@ -105,5 +105,8 @@ int main(int argc, char * const argv[])
 			fclose(salida);
     	}	
 	}
+	times(&mytime);
+	printf("User = %f\n", (double) mytime.tms_utime/sysconf(_SC_CLK_TCK));
+	printf("Sys = %f\n", (double) mytime.tms_stime/sysconf(_SC_CLK_TCK));
 	return 0;
 }
