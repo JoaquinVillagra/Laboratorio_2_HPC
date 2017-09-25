@@ -5,9 +5,13 @@
 #include <unistd.h>
 #include <string.h>
 #include <pmmintrin.h>
+#include <sys/times.h>
+#include <time.h>
 #define C 1.0
 #define DT 0.1
 #define DD 2.0 
+
+struct tms mytime;
 
 int main(int argc, char * const argv[])
 {
@@ -73,7 +77,7 @@ int main(int argc, char * const argv[])
 		{	
 			#pragma omp parallel num_threads(hebras)
 			{
-				#pragma omp for schedule(dynamic, 20)
+				#pragma omp for schedule(static, hebras)
 				for (j = 1; j < dim; j++)
 				{
 					if (index == 1)
@@ -105,5 +109,8 @@ int main(int argc, char * const argv[])
 			fclose(salida);
     	}	
 	}
+	times(&mytime);
+	printf("User = %f\n", (double) mytime.tms_utime/sysconf(_SC_CLK_TCK));
+	printf("Sys = %f\n", (double) mytime.tms_stime/sysconf(_SC_CLK_TCK));
 	return 0;
 }
