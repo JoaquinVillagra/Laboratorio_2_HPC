@@ -5,13 +5,14 @@
 #include <unistd.h>
 #include <string.h>
 #include <pmmintrin.h>
-#include <sys/times.h>
-#include <time.h>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #define C 1.0
 #define DT 0.1
 #define DD 2.0 
-
-struct tms mytime;
 
 int main(int argc, char * const argv[])
 {
@@ -49,6 +50,7 @@ int main(int argc, char * const argv[])
 		default:
 			abort ();
 	}
+	double inicio = omp_get_wtime();
 	//Definiendo matrices necesarias
 	float H_t2[dim][dim], H_t1[dim][dim], H[dim][dim];
 	//Asignando ceros como valor por defecto de las matrices generadas
@@ -73,11 +75,11 @@ int main(int argc, char * const argv[])
 	//Operando iteraciones de trabajo
 	for (index = 0; index < steps; index++)
 	{
-		for (i = 1; i < dim; i++)
-		{	
-			#pragma omp parallel num_threads(hebras)
-			{
-				#pragma omp for schedule(static, hebras)
+		#pragma omp parallel num_threads(hebras)
+		{
+			#pragma omp for schedule(dynamic, 10)
+			for (i = 1; i < dim; i++)
+			{	
 				for (j = 1; j < dim; j++)
 				{
 					if (index == 1)
@@ -104,13 +106,12 @@ int main(int argc, char * const argv[])
     	//Comprobando iteración de salida
     	if(iteration_exit==index)
     	{
-    		FILE *salida = fopen(file_exit,"wb");
-			fwrite(H,dim*dim, sizeof(float),salida);
+    		FILE *salida = fopen(file_exit,"w+b");
+			fwrite(H, sizeof(float), dim*dim, salida);
 			fclose(salida);
     	}	
 	}
-	times(&mytime);
-	printf("User = %f\n", (double) mytime.tms_utime/sysconf(_SC_CLK_TCK));
-	printf("Sys = %f\n", (double) mytime.tms_stime/sysconf(_SC_CLK_TCK));
+	double fin = omp_get_wtime();
+	printf("%f\n",fin-inicio);
 	return 0;
 }

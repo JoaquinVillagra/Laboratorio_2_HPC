@@ -10,4 +10,4 @@ Implementar un simulador paralelo de la difusión de una onda según la ecuació
 ## Compilación
 - Mediante MakeFile
 
-- $ gcc -msse3 -o wave wave.c $
+- $ gcc -o wave -fopenmp wave.c
