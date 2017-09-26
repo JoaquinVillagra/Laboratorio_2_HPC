@@ -50,7 +50,7 @@ int main(int argc, char * const argv[])
 		default:
 			abort ();
 	}
-	double inicio = omp_get_wtime();
+	double timestart = omp_get_wtime();
 	//Definiendo matrices necesarias
 	float H_t2[dim][dim], H_t1[dim][dim], H[dim][dim];
 	//Asignando ceros como valor por defecto de las matrices generadas
@@ -77,7 +77,7 @@ int main(int argc, char * const argv[])
 	{
 		#pragma omp parallel num_threads(hebras)
 		{
-			#pragma omp for schedule(dynamic, 10)
+			#pragma omp for schedule(dynamic, 20)
 			for (i = 1; i < dim; i++)
 			{	
 				for (j = 1; j < dim; j++)
@@ -111,7 +111,7 @@ int main(int argc, char * const argv[])
 			fclose(salida);
     	}	
 	}
-	double fin = omp_get_wtime();
-	printf("%f\n",fin-inicio);
+	double timefinish = omp_get_wtime();
+	printf("%f\n",timefinish-timestart);
 	return 0;
 }

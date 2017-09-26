@@ -1,1 +1,1 @@
-gcc -o wave -fopenmp wave.c
+gcc wave.c -o wave -fopenmp
