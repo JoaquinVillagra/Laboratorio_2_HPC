@@ -83,7 +83,7 @@ int main(int argc, char * const argv[])
 	float **H_aux;
 	#pragma omp parallel num_threads(hebras)
 	{
-		#pragma omp for schedule(static, 4)
+		#pragma omp for schedule(dynamic, 4)
 		for (i = 1; i < dim; i++)
 		{
 			for (j = 1; j < dim; j++)
@@ -98,7 +98,7 @@ int main(int argc, char * const argv[])
 	{
 		#pragma omp parallel num_threads(hebras)
 		{
-			#pragma omp for schedule(static, 4)
+			#pragma omp for schedule(dynamic, 4)
 			for (i = 1; i < dim-1; i++)
 			{
 				for (j = 1; j < dim-1; j++)
