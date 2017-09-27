@@ -10,14 +10,39 @@
 #include <omp.h>
 #endif
 
-#define C 1.0
-#define DT 0.1
-#define DD 2.0 
+#define K2 0.0025
+#define K1 0.00125
+
+void imprimir(float** matriz, int N){
+	int i,j;
+	for (i = 0; i < N; i++)
+	{
+		for (j = 0; j < N; j++)
+		{
+			printf("%.01f ", matriz[i][j]);
+		}
+		printf("\n");
+	}
+	printf("------------------------\n");
+}
+
+float** crear_Matriz(int N){
+	int i,j;
+	float** matriz = (float**) malloc(sizeof(float*)*N);
+	for (i = 0; i < N; i++)
+	{
+		matriz[i] = (float*) malloc(sizeof(float)*N);
+		for (j = 0; j < N; j++)
+		{
+			matriz[i][j] = 0;
+		}
+	}
+	//imprimir(matriz, N);
+	return matriz;
+}
 
 int main(int argc, char * const argv[])
 {
-	int K1 = pow(C, 2)/2*pow(DT/DD, 2);
-	int K2 = pow(C, 2)*pow(DT/DD, 2);
 	int i, j, c, dim, steps, hebras, iteration_exit, index;
 	char* file_exit = NULL;
 	opterr = 0;
@@ -52,57 +77,48 @@ int main(int argc, char * const argv[])
 	}
 	double timestart = omp_get_wtime();
 	//Definiendo matrices necesarias
-	float H_t2[dim][dim], H_t1[dim][dim], H[dim][dim];
-	//Asignando ceros como valor por defecto de las matrices generadas
-	for (i = 0; i < dim; i++)
+	float **H = crear_Matriz(dim);
+	float **H_t1 = crear_Matriz(dim);
+	float **H_t2 = crear_Matriz(dim);
+	float **H_aux;
+	#pragma omp parallel num_threads(hebras)
 	{
-		for (j = 0; j < dim; j++)
+		#pragma omp for schedule(static, 4)
+		for (i = 1; i < dim; i++)
 		{
-			H[i][j] = 0;
-			H_t1[i][j] = 0;
-			H_t2[i][j] = 0;
-		}	
-	}
-	//Asignando configuración inicial de onda
-	for (i = 1; i < dim; i++)
-	{
-		for (j = 1; j < dim; j++)
-		{
-			if(i>0.4*dim && i<0.6*dim && j>0.4*dim && j<0.6*dim)
-           		H_t1[i][j] = 20.0;
-		}	
+			for (j = 1; j < dim; j++)
+			{
+				if(i>0.4*dim && i<0.6*dim && j>0.4*dim && j<0.6*dim)
+	           		H_t1[i][j] = 20.0;
+			}	
+		}
 	}
 	//Operando iteraciones de trabajo
-	for (index = 0; index < steps; index++)
+	for (index = 1; index < steps; index++)
 	{
 		#pragma omp parallel num_threads(hebras)
 		{
-			#pragma omp for schedule(dynamic, 20)
-			for (i = 1; i < dim; i++)
-			{	
-				for (j = 1; j < dim; j++)
+			#pragma omp for schedule(static, 4)
+			for (i = 1; i < dim-1; i++)
+			{
+				for (j = 1; j < dim-1; j++)
 				{
 					if (index == 1)
-					{
-						H[i][j] = 2*H_t1[i][j] + K1 * (H_t1[i+1][j] + H_t1[i-1][j] + H_t1[i][j-1] + H_t1[i][j+1] - 4*H_t1[i][j]);
+					{	
+						H[i][j] = H_t1[i][j] + K1 * (H_t1[i+1][j] + H_t1[i-1][j] + H_t1[i][j-1] + H_t1[i][j+1] - 4*H_t1[i][j]);
 					}
 					else
-					{
-						if (index==2)
-						{
-							memcpy(H_t2,H, dim*dim*sizeof(float));
-	                    	H_t1[i][j] = 2*H_t2[i][j] + K1 * (H_t2[i+1][j] + H_t2[i-1][j] + H_t2[i][j-1] + H_t2[i][j+1] - 4*H_t2[i][j]);
-						}
-						else
-						{
-							H[i][j] = 2*H_t1[i][j] - H_t2[i][j] + K2 * (H_t1[i+1][j] + H_t1[i-1][j] + H_t1[i][j-1] + H_t1[i][j+1] - 4*H_t1[i][j]);
-						}	
+					{	
+						H[i][j] = 2*H_t1[i][j] - H_t2[i][j] + K2 * (H_t1[i+1][j] + H_t1[i-1][j] + H_t1[i][j-1] + H_t1[i][j+1] - 4*H_t1[i][j]);	
 					}
 				}
 			}
 		}
-		memcpy(H_t2,H_t1, dim*dim*sizeof(float));
-		memcpy(H_t1,H, dim*dim*sizeof(float));
+		H_aux = H_t2;
+		H_t2 = H_t1;
+		H_t1 = H;
+		H = H_aux;
+		//memcpy(H_t2,H_t1, dim*dim*sizeof(float))
     	//Comprobando iteración de salida
     	if(iteration_exit==index)
     	{
